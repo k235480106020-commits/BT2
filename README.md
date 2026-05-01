@@ -54,7 +54,7 @@ Hệ thống quản lý kho hàng được mô hình hóa thông qua ba thực t
 
 ```
 ┌─────────────┐         ┌─────────────┐         ┌──────────────────┐
-│   KhoHang   │ 1──────M│  SanPham    │ 1──────M│  PhieuNhapXuat   │
+│   KhoHang   │ 1──────N│  SanPham    │ 1──────N│  PhieuNhapXuat   │
 │─────────────│         │─────────────│         │──────────────────│
 │ MaKho (PK)  │         │ MaSP (PK)   │         │ MaPhieu (PK)     │
 │ TenKho      │         │ TenSP       │         │ MaSP (FK)        │
@@ -389,6 +389,43 @@ Chèn vào bảng nhập xuất
 ## 4. HÀM (FUNCTION)
 
 ### 4.1 Hàm dựng sẵn (Built-in Functions)
+Các loại Built-in Function trong SQL Server
+
+Trong SQL Server có rất nhiều **Built-in Function (hàm có sẵn)** giúp xử lý dữ liệu nhanh chóng mà không cần tự viết lại logic.  
+Các hàm này được chia thành các nhóm chính như sau:
+
+---
+
+## 🔹 1. Hàm xử lý chuỗi (String Functions)
+
+**Chức năng:** Xử lý dữ liệu dạng chuỗi ký tự  
+
+
+## 🔹 2. Hàm số học (Mathematical Functions)
+
+**Chức năng:** Thực hiện các phép toán số  
+
+
+## 🔹 3. Hàm ngày giờ (Date and Time Functions)
+
+**Chức năng:** Xử lý dữ liệu ngày tháng  
+
+## 🔹 4. Hàm chuyển đổi kiểu (Conversion Functions)
+
+**Chức năng:** Chuyển đổi giữa các kiểu dữ liệu  
+
+## 🔹 5. Hàm tổng hợp (Aggregate Functions)
+
+**Chức năng:** Tính toán trên nhiều dòng dữ liệu  
+
+
+## 🔹 6. Hàm logic (Logical Functions)
+
+**Chức năng:** Xử lý điều kiện  
+
+## 🔹 7. Hàm hệ thống (System Functions)
+
+**Chức năng:** Trả về thông tin hệ thống
 
 SQL Server cung cấp một bộ hàm dựng sẵn phong phú. Dưới đây là các hàm được áp dụng vào nghiệp vụ quản lý kho hàng.
 
@@ -514,6 +551,22 @@ SQL Server hỗ trợ ba loại UDF chính: **Scalar Function** (trả về mộ
 
 **Bài toán:** Mỗi sản phẩm được nhập vào kho lần đầu vào một ngày cụ thể. Cần xây dựng hàm trả về số ngày mà sản phẩm đó đã tồn tại trong hệ thống kho, tính từ `NgayNhapDau` đến thời điểm truy vấn. Thông số này giúp nhận diện hàng hóa tồn lâu, dễ lỗi thời.
 
+# Phân tích logic xử lý Function `fn_SoNgayTonKho`
+
+Function `fn_SoNgayTonKho` được sử dụng để tính số ngày một sản phẩm đã tồn tại trong kho dựa trên ngày nhập đầu tiên của sản phẩm.
+
+Đầu tiên, function nhận vào mã sản phẩm `@MaSP`. Sau đó hệ thống truy xuất bảng `SanPham` để lấy giá trị `NgayNhapDau` tương ứng với sản phẩm cần kiểm tra.
+
+Sau khi lấy dữ liệu, hệ thống kiểm tra sản phẩm có tồn tại hay không. Nếu không tìm thấy sản phẩm hoặc chưa có ngày nhập đầu, function sẽ trả về `NULL` để tránh phát sinh lỗi tính toán.
+
+Nếu dữ liệu hợp lệ, hệ thống sử dụng hàm `DATEDIFF` để tính khoảng thời gian từ ngày nhập đầu đến thời điểm hiện tại. Kết quả nhận được chính là số ngày sản phẩm đã lưu trong kho.
+
+Cuối cùng, function trả về giá trị số ngày tồn kho dưới dạng kiểu dữ liệu `INT`.
+
+Function này hỗ trợ quản lý hàng tồn kho, theo dõi sản phẩm lưu kho lâu ngày và phục vụ cho các báo cáo thống kê trong hệ thống quản lý kho hàng.
+
+
+
 ```sql
 -- ============================================================
 -- SCALAR FUNCTION: Tính số ngày sản phẩm đã ở trong kho
@@ -571,6 +624,22 @@ Xây dựng hàm tính tồn kho
 #### 4.2.2 Inline Table-valued Function – Danh sách sản phẩm theo kho
 
 **Bài toán:** Quản lý kho thường xuyên cần xem toàn bộ sản phẩm trong một kho cụ thể kèm thông tin giá trị tồn, nhãn cảnh báo. Inline TVF phù hợp vì có thể tối ưu bởi Query Optimizer như một view có tham số.
+
+
+Phân tích logic
+
+Function fn_SanPhamTheoKho được sử dụng để lấy danh sách sản phẩm thuộc một kho cụ thể và đồng thời phân tích tình trạng tồn kho của từng sản phẩm.
+
+Đầu tiên, function nhận vào mã kho @MaKho. Hệ thống sử dụng giá trị này để tìm các sản phẩm thuộc kho tương ứng trong bảng SanPham.
+
+Sau đó, dữ liệu sản phẩm được kết hợp với bảng KhoHang thông qua khóa MaKho nhằm lấy thêm thông tin về kho như tên kho và địa chỉ kho lưu trữ.
+
+Trong quá trình truy vấn, hệ thống thực hiện tính toán giá trị tồn kho của từng sản phẩm bằng cách nhân số lượng tồn với đơn giá nhập. Giá trị này giúp đánh giá tổng giá trị hàng hóa hiện còn trong kho.
+
+Tiếp theo, function phân loại trạng thái tồn kho dựa trên số lượng hiện có và mức tồn tối thiểu của sản phẩm. Nếu số lượng bằng 0 thì sản phẩm được xác định là hết hàng. Nếu số lượng nhỏ hơn hoặc bằng mức tồn tối thiểu thì trạng thái là sắp hết. Trường hợp số lượng chỉ cao hơn mức tối thiểu một khoảng nhỏ thì được phân loại là tồn thấp. Các sản phẩm còn lại được xem là ở trạng thái bình thường.
+
+Cuối cùng, function trả về danh sách sản phẩm cùng thông tin tồn kho, giá trị tồn và trạng thái hàng hóa để phục vụ cho quản lý kho, kiểm soát nhập xuất và hỗ trợ báo cáo thống kê.
+
 
 ```sql
 -- ============================================================
@@ -630,6 +699,41 @@ Xây dựng và lấy danh sách sản phẩm theo kho
 #### 4.2.3 Multi-statement Table-valued Function – Tính giá trị tồn kho theo mức
 
 **Bài toán:** Kế toán kho cần bảng phân loại sản phẩm theo ba mức giá trị tồn kho (Cao – Trung bình – Thấp), đồng thời tính thêm thuế VAT tham chiếu và tỷ lệ so với tổng kho. Yêu cầu này đòi hỏi nhiều bước xử lý, phù hợp với Multi-statement TVF.
+
+# Phân tích logic xử lý Function `fn_TinhGiaTriTonKho`
+
+Function `fn_TinhGiaTriTonKho` được sử dụng để tính toán và phân tích giá trị tồn kho của các sản phẩm trong một kho cụ thể.
+
+Đầu tiên, function nhận vào mã kho `@MaKho`. Dựa trên mã kho này, hệ thống truy xuất bảng `SanPham` để lấy danh sách các sản phẩm thuộc kho tương ứng.
+
+Tiếp theo, hệ thống tính tổng giá trị tồn kho bằng cách cộng toàn bộ giá trị của các sản phẩm trong kho. Giá trị của từng sản phẩm được xác định bằng công thức:
+
+* số lượng tồn × đơn giá nhập
+
+Tổng giá trị kho được sử dụng để phục vụ việc tính tỷ lệ giá trị của từng sản phẩm trong toàn bộ kho.
+
+Sau đó, hệ thống kiểm tra nếu tổng giá trị kho bằng 0 thì sẽ gán giá trị mặc định bằng 1 nhằm tránh lỗi chia cho 0 trong quá trình tính toán tỷ lệ.
+
+Tiếp theo, function thực hiện xử lý cho từng sản phẩm trong kho. Với mỗi sản phẩm, hệ thống tính:
+
+* giá trị tồn kho
+* giá trị tồn kho có VAT 10%
+* tỷ lệ giá trị sản phẩm trong tổng giá trị kho
+
+Ngoài ra, hệ thống còn phân loại mức giá trị của sản phẩm dựa trên tổng giá trị tồn kho. Nếu giá trị sản phẩm rất lớn thì được xếp vào nhóm giá trị cao, các sản phẩm có giá trị trung bình sẽ thuộc nhóm trung bình, còn lại là nhóm giá trị thấp.
+
+Sau khi hoàn tất tính toán, toàn bộ dữ liệu được ghi vào bảng kết quả `@KetQua`.
+
+Cuối cùng, function trả về danh sách sản phẩm cùng các thông tin phân tích như:
+
+* số lượng tồn
+* giá trị tồn kho
+* giá trị có VAT
+* mức giá trị sản phẩm
+* tỷ lệ giá trị trong kho
+
+Function này hỗ trợ quản lý kho hàng, đánh giá giá trị hàng hóa, phân tích cơ cấu tồn kho và phục vụ cho các báo cáo thống kê tài chính trong hệ thống quản lý kho.
+
 
 ```sql
 -- ============================================================
@@ -764,7 +868,24 @@ Xây dựng và khai thác hàm phân loại giá trị tồn kho theo mức
 Stored Procedure (thủ tục lưu trữ) là các khối lệnh T-SQL được biên dịch sẵn và lưu trong cơ sở dữ liệu. So với việc gửi câu lệnh SQL đơn thuần từ ứng dụng, Stored Procedure mang lại ba lợi thế chính: **hiệu năng** (kế hoạch thực thi được cache), **bảo mật** (kiểm soát quyền truy cập ở tầng thủ tục), và **tái sử dụng** (một lần viết, nhiều nơi gọi).
 
 ### 5.1 System Stored Procedure
+Trong SQL Server có rất nhiều **Stored Procedure (SP) có sẵn** gọi là **System Stored Procedure**, được chia thành một số nhóm chính như sau:
 
+## 🔹 Các loại System Stored Procedure
+
+- **Metadata SP** (truy vấn thông tin hệ thống):  
+  Ví dụ: `sp_help`, `sp_columns`, `sp_tables`  
+
+- **Security SP** (quản lý bảo mật, quyền):  
+  Ví dụ: `sp_addlogin`
+
+- **Database Management SP** (quản lý cơ sở dữ liệu):  
+  Ví dụ: `sp_rename`  
+
+- **Execution SP** (thực thi lệnh động):  
+  Ví dụ: `sp_executesql`  
+
+- **System Monitoring SP** (theo dõi hệ thống):  
+  
 SQL Server cung cấp nhiều thủ tục hệ thống hữu ích cho quản trị và khảo sát cấu trúc CSDL.
 
 ```sql
@@ -792,6 +913,25 @@ Kiểm tra các ràng buộc (constraint) trên bảng SanPham
 ### 5.2 User-defined Stored Procedure
 
 #### 5.2.1 `sp_ThemSanPham` – Thêm sản phẩm mới vào kho
+
+# Phân tích logic xử lý Procedure `sp_ThemSanPham`
+
+Procedure `sp_ThemSanPham` được sử dụng để thêm mới sản phẩm vào hệ thống quản lý kho hàng và đồng thời kiểm tra tính hợp lệ của dữ liệu trước khi lưu vào cơ sở dữ liệu.
+
+Đầu tiên, procedure nhận các thông tin của sản phẩm như tên sản phẩm, đơn vị tính, số lượng tồn, đơn giá nhập, mã kho và mức tồn tối thiểu. Ngoài ra, procedure còn sử dụng biến output `@MaSP_Moi` để trả về mã sản phẩm vừa được tạo.
+
+Sau đó, hệ thống kiểm tra kho hàng có tồn tại và đang ở trạng thái hoạt động hay không. Nếu kho không tồn tại hoặc đã ngừng hoạt động thì procedure sẽ báo lỗi và dừng xử lý nhằm tránh thêm sản phẩm vào kho không hợp lệ.
+
+Tiếp theo, hệ thống kiểm tra tên sản phẩm có bị bỏ trống hay không. Nếu tên sản phẩm không hợp lệ, procedure sẽ trả về thông báo lỗi để đảm bảo dữ liệu nhập vào đầy đủ.
+
+Sau bước kiểm tra dữ liệu cơ bản, hệ thống tiếp tục kiểm tra sản phẩm có bị trùng tên trong cùng một kho hay không. Điều này giúp tránh việc lưu nhiều sản phẩm giống nhau trong cùng kho hàng và hỗ trợ quản lý dữ liệu chính xác hơn.
+
+Nếu toàn bộ dữ liệu đều hợp lệ, procedure thực hiện thêm sản phẩm mới vào bảng `SanPham`. Sau khi thêm thành công, hệ thống lấy mã sản phẩm vừa tạo bằng `SCOPE_IDENTITY()` và gán cho biến output để phục vụ các thao tác tiếp theo.
+
+Toàn bộ quá trình thêm dữ liệu được đặt trong khối `TRY...CATCH` nhằm xử lý lỗi hệ thống. Nếu phát sinh lỗi trong quá trình lưu dữ liệu, procedure sẽ trả về thông báo lỗi và mã trạng thái tương ứng.
+
+Procedure này hỗ trợ kiểm soát dữ liệu đầu vào, đảm bảo tính toàn vẹn dữ liệu và tăng độ an toàn cho quá trình quản lý sản phẩm trong hệ thống kho hàng.
+
 
 ```sql
 -- ============================================================
@@ -906,6 +1046,35 @@ Tạo sp thêm sản phẩm mới và thử thêm sản phẩm hợp lệ và kh
 
 #### 5.2.2 `sp_TongGiaTriKho` – Tổng hợp giá trị tồn kho
 
+
+# Phân tích logic xử lý Procedure `sp_TongGiaTriKho`
+
+Procedure `sp_TongGiaTriKho` được sử dụng để tính toán tổng giá trị tồn kho trong hệ thống quản lý kho hàng. Procedure hỗ trợ tính cho toàn bộ kho hoặc cho một kho cụ thể thông qua tham số đầu vào `@MaKho`.
+
+Đầu tiên, procedure nhận tham số mã kho `@MaKho`. Nếu tham số này bằng `NULL`, hệ thống sẽ thực hiện thống kê cho toàn bộ kho hàng trong hệ thống. Ngược lại, nếu có mã kho cụ thể, hệ thống chỉ tính toán cho kho được chỉ định.
+
+Sau đó, hệ thống tiến hành tính:
+
+* tổng giá trị tồn kho
+* tổng số sản phẩm
+* tổng số lượng hàng tồn
+
+Giá trị tồn kho được xác định bằng cách lấy số lượng tồn nhân với đơn giá nhập của từng sản phẩm.
+
+Trong trường hợp tính cho toàn bộ kho, procedure còn thực hiện tạo báo cáo chi tiết theo từng kho hàng. Hệ thống kết hợp dữ liệu giữa bảng `SanPham` và `KhoHang` để lấy thông tin tên kho cùng các số liệu thống kê tương ứng.
+
+Ngoài giá trị tồn kho thông thường, procedure còn tính thêm giá trị tồn kho có VAT 10% nhằm phục vụ cho việc phân tích tài chính và báo cáo quản lý.
+
+Kết quả thống kê tổng hợp sẽ được lưu vào các biến output gồm:
+
+* `@TongGiaTri`: tổng giá trị tồn kho
+* `@SoSanPham`: tổng số sản phẩm
+* `@TongSoLuong`: tổng số lượng hàng tồn
+
+Procedure này hỗ trợ theo dõi giá trị hàng hóa trong kho, phục vụ thống kê tồn kho, đánh giá tài sản lưu kho và hỗ trợ ra quyết định quản lý trong hệ thống quản lý kho hàng.
+
+
+
 ```sql
 -- ============================================================
 -- SP_TONGGIATRIKHO: Tính tổng giá trị tồn kho, dùng tham số OUTPUT
@@ -979,6 +1148,67 @@ SELECT
 Xây dựng và thực thi sp tổng hợp giá trị tồn kho
 
 #### 5.2.3 `sp_BaoCaoNhapXuat` – Báo cáo nhập – xuất – tồn
+
+# Bài toán và phân tích logic xử lý Procedure `sp_BaoCaoNhapXuat`
+
+# 1. Đặt bài toán
+
+Trong hệ thống quản lý kho hàng, doanh nghiệp cần theo dõi tình hình nhập kho, xuất kho và số lượng tồn hiện tại của từng sản phẩm nhằm:
+
+* kiểm soát lượng hàng hóa trong kho
+* đánh giá tình trạng tồn kho
+* phát hiện sản phẩm sắp hết hoặc hết hàng
+* hỗ trợ lập kế hoạch nhập hàng
+* phục vụ báo cáo quản trị và thống kê tài chính
+
+Tuy nhiên, dữ liệu nhập xuất thường phát sinh liên tục và số lượng lớn, gây khó khăn cho việc tổng hợp thủ công. Vì vậy cần xây dựng một procedure giúp tự động thống kê nhập – xuất – tồn theo khoảng thời gian và theo từng kho hàng.
+
+---
+
+# 2. Phân tích logic xử lý
+
+Procedure `sp_BaoCaoNhapXuat` được sử dụng để tạo báo cáo tổng hợp nhập kho, xuất kho và tồn kho của sản phẩm trong hệ thống.
+
+Đầu tiên, procedure nhận vào:
+
+* ngày bắt đầu `@TuNgay`
+* ngày kết thúc `@DenNgay`
+* mã kho `@MaKho`
+
+Nếu người dùng không truyền khoảng thời gian, hệ thống sẽ tự động lấy dữ liệu trong vòng một tháng gần nhất.
+
+Sau đó, hệ thống truy xuất danh sách sản phẩm từ bảng `SanPham` và kết hợp với bảng `KhoHang` để lấy thông tin kho lưu trữ.
+
+Tiếp theo, procedure thực hiện tổng hợp dữ liệu nhập kho trong khoảng thời gian được chọn. Hệ thống tính:
+
+* tổng số lượng nhập
+* tổng giá trị nhập
+
+Dữ liệu này được lấy từ bảng `PhieuNhapXuat` với loại phiếu là `Nhập`.
+
+Tương tự, hệ thống tiếp tục tổng hợp dữ liệu xuất kho bằng cách tính:
+
+* tổng số lượng xuất
+* tổng giá trị xuất
+
+với các giao dịch có loại phiếu là `Xuất`.
+
+Sau khi có dữ liệu nhập và xuất, procedure tiến hành tính tồn kho hiện tại của từng sản phẩm dựa trên số lượng tồn đang lưu trong bảng `SanPham`.
+
+Ngoài ra, hệ thống còn đánh giá trạng thái tồn kho của sản phẩm. Nếu số lượng tồn bằng 0 thì sản phẩm được xác định là hết hàng và cần nhập thêm. Nếu số lượng tồn nhỏ hơn hoặc bằng mức tồn tối thiểu thì hệ thống cảnh báo tồn kho dưới mức an toàn. Các sản phẩm còn lại được xem là tồn kho bình thường.
+
+Cuối cùng, procedure trả về báo cáo tổng hợp gồm:
+
+* thông tin sản phẩm
+* thông tin kho hàng
+* số lượng nhập
+* số lượng xuất
+* giá trị nhập xuất
+* tồn kho hiện tại
+* giá trị tồn kho
+* nhận xét tình trạng tồn kho
+
+Procedure này hỗ trợ quản lý hàng hóa hiệu quả, theo dõi luồng nhập xuất, kiểm soát tồn kho và phục vụ cho các báo cáo quản trị trong hệ thống quản lý kho hàng.
 
 ```sql
 -- ============================================================
@@ -1076,6 +1306,55 @@ Trigger là đối tượng cơ sở dữ liệu được tự động thực th
 
 #### 6.1.1 Trigger sau khi INSERT phiếu
 
+# Bài toán và phân tích logic xử lý Trigger `trg_PhieuNhapXuat_Insert`
+
+# 1. Đặt bài toán
+
+Trong hệ thống quản lý kho hàng, số lượng tồn kho của sản phẩm phải luôn được cập nhật chính xác sau mỗi giao dịch nhập hoặc xuất hàng.
+
+Nếu việc cập nhật tồn kho được thực hiện thủ công sẽ dễ xảy ra:
+
+* sai lệch số lượng tồn
+* xuất hàng vượt quá số lượng thực tế
+* dữ liệu kho không đồng bộ
+* khó kiểm soát tình trạng tồn kho thấp
+
+Vì vậy cần xây dựng trigger tự động cập nhật số lượng tồn kho ngay khi phát sinh phiếu nhập hoặc phiếu xuất nhằm đảm bảo tính chính xác và toàn vẹn dữ liệu trong hệ thống.
+
+---
+
+# 2. Phân tích logic xử lý
+
+Trigger `trg_PhieuNhapXuat_Insert` được kích hoạt sau khi có dữ liệu mới được thêm vào bảng `PhieuNhapXuat`.
+
+Đầu tiên, trigger kiểm tra loại phiếu giao dịch vừa được thêm.
+
+Nếu giao dịch là phiếu nhập, hệ thống sẽ tự động cộng thêm số lượng nhập vào tồn kho hiện tại của sản phẩm tương ứng trong bảng `SanPham`.
+
+Ngược lại, nếu giao dịch là phiếu xuất, hệ thống sẽ kiểm tra số lượng tồn kho hiện tại trước khi thực hiện xuất hàng.
+
+Nếu số lượng tồn nhỏ hơn số lượng cần xuất, trigger sẽ:
+
+* phát sinh thông báo lỗi
+* hủy giao dịch hiện tại
+* ngăn không cho dữ liệu xuất kho được lưu vào hệ thống
+
+Điều này giúp tránh tình trạng tồn kho âm và đảm bảo dữ liệu kho luôn chính xác.
+
+Nếu số lượng tồn kho hợp lệ, hệ thống sẽ thực hiện giảm số lượng tồn tương ứng với lượng hàng đã xuất.
+
+Sau khi cập nhật tồn kho, trigger tiếp tục kiểm tra mức tồn kho an toàn của sản phẩm. Nếu số lượng tồn hiện tại nhỏ hơn hoặc bằng mức tồn tối thiểu đã quy định, hệ thống sẽ sinh cảnh báo để người quản lý có kế hoạch nhập thêm hàng.
+
+Cuối cùng, trigger hoàn tất quá trình cập nhật dữ liệu tồn kho tự động sau giao dịch nhập xuất.
+
+Trigger này giúp:
+
+* tự động đồng bộ tồn kho
+* đảm bảo tính toàn vẹn dữ liệu
+* ngăn xuất vượt số lượng tồn
+* hỗ trợ cảnh báo tồn kho thấp
+* tăng độ chính xác trong quản lý kho hàng
+
 ```sql
 -- ============================================================
 -- TRIGGER: Cập nhật SoLuongTon khi có phiếu nhập hoặc xuất mới
@@ -1132,7 +1411,42 @@ END;
 GO
 ```
 
+```sql
+-- Kiểm tra trước khi thêm phiếu
+SELECT MaSP, TenSP, SoLuongTon FROM SanPham WHERE MaSP = 5;
+
+-- Thêm phiếu xuất 30 chuột Logitech
+INSERT INTO PhieuNhapXuat (MaSP, NgayGiaoDich, LoaiPhieu, SoLuong, DonGia, GhiChu)
+VALUES (5, GETDATE(), N'Xuat', 30, 1100000, N'Test trigger');
+
+-- Kiểm tra sau khi thêm phiếu
+SELECT MaSP, TenSP, SoLuongTon FROM SanPham WHERE MaSP = 5;
+```
+
+**Kết quả thực thi:**
+<img width="1919" height="1079" alt="image" src="https://github.com/user-attachments/assets/70c2f0e3-c5f0-43a7-8ebb-5397dab23b3c" />
+Tạo trigger và chuẩn bị dữ liệu
+
+<img width="1919" height="1079" alt="image" src="https://github.com/user-attachments/assets/a11bdc26-8f29-42c9-a037-0ea7eaefc878" />
+Kiểm tra trigger sau khi thực thi
+
 #### 6.1.2 Trigger sau khi DELETE phiếu
+
+Phân tích logic xử lý Trigger trg_PhieuNhapXuat_Delete
+
+Trigger trg_PhieuNhapXuat_Delete được kích hoạt sau khi dữ liệu bị xóa khỏi bảng PhieuNhapXuat.
+
+Trigger này có nhiệm vụ hoàn trả lại số lượng tồn kho tương ứng với giao dịch đã bị xóa nhằm đảm bảo dữ liệu tồn kho luôn chính xác.
+Đầu tiên, hệ thống kiểm tra các phiếu giao dịch vừa bị xóa thông qua bảng tạm deleted.
+
+
+Nếu phiếu bị xóa là phiếu nhập, hệ thống sẽ giảm lại số lượng tồn kho của sản phẩm tương ứng vì trước đó số lượng này đã được cộng thêm khi nhập hàng.
+
+Ngược lại, nếu phiếu bị xóa là phiếu xuất, hệ thống sẽ cộng lại số lượng tồn kho do lượng hàng này trước đó đã bị trừ khỏi kho khi thực hiện xuất hàng.
+
+Quá trình cập nhật tồn kho được thực hiện tự động thông qua việc liên kết bảng SanPham với dữ liệu trong bảng deleted dựa trên mã sản phẩm.
+
+Sau khi hoàn tất cập nhật, hệ thống hiển thị thông báo xác nhận rằng tồn kho đã được hoàn tác tương ứng với giao dịch bị xóa.
 
 ```sql
 -- ============================================================
@@ -1163,45 +1477,8 @@ BEGIN
 END;
 GO
 ```
-
-**Kiểm thử trigger:**
-
-```sql
--- Kiểm tra trước khi thêm phiếu
-SELECT MaSP, TenSP, SoLuongTon FROM SanPham WHERE MaSP = 5;
--- Kết quả: SoLuongTon = 120
-
--- Thêm phiếu xuất 30 chuột Logitech
-INSERT INTO PhieuNhapXuat (MaSP, NgayGiaoDich, LoaiPhieu, SoLuong, DonGia, GhiChu)
-VALUES (5, GETDATE(), N'Xuat', 30, 1100000, N'Test trigger');
-
--- Kiểm tra sau khi thêm phiếu
-SELECT MaSP, TenSP, SoLuongTon FROM SanPham WHERE MaSP = 5;
--- Kết quả: SoLuongTon = 90 (giảm đúng 30)
-```
-
-**Kết quả thực thi:**
-```
-[TRIGGER INSERT] Đã cập nhật tồn kho thành công.
-(1 rows affected)
-
-MaSP  TenSP                        SoLuongTon
-5     Chuột Logitech MX Master 3   90
-```
-
-**Kiểm thử xuất vượt tồn:**
-
-```sql
--- Thử xuất vượt quá tồn kho
-INSERT INTO PhieuNhapXuat (MaSP, NgayGiaoDich, LoaiPhieu, SoLuong, DonGia)
-VALUES (5, GETDATE(), N'Xuat', 500, 1100000);
-```
-
-**Kết quả:**
-```
-Msg 50000, Level 16, State 1
-Lỗi: Không đủ hàng tồn kho để xuất. Giao dịch bị hủy.
-```
+<img width="1913" height="1079" alt="image" src="https://github.com/user-attachments/assets/2ac464db-cd54-44fe-b7bf-f4b2c73e3d06" />
+Tạo trigger xóa
 
 ### 6.2 Trigger đệ quy và phân tích rủi ro
 
@@ -1213,39 +1490,118 @@ Trong hệ thống kho hàng, tình huống này có thể xảy ra nếu một 
 
 #### 6.2.2 Ví dụ trigger gây đệ quy gián tiếp (mô phỏng)
 
+# Phân tích logic xử lý Trigger đệ quy gián tiếp
+
+Đoạn mã được sử dụng để mô phỏng hiện tượng trigger đệ quy gián tiếp trong hệ quản trị cơ sở dữ liệu. Trường hợp này xảy ra khi một trigger trên bảng này cập nhật dữ liệu của bảng khác, sau đó trigger của bảng thứ hai lại cập nhật ngược trở lại bảng ban đầu, tạo thành vòng lặp kích hoạt liên tục.
+
+Đầu tiên, hệ thống bật chế độ `RECURSIVE_TRIGGERS` để cho phép các trigger có thể kích hoạt lẫn nhau nhiều lần trong cùng một transaction.
+
+Sau đó, hệ thống kiểm tra và xóa các trigger cũ nếu đã tồn tại nhằm tránh xung đột khi tạo lại trigger mới.
+
+Tiếp theo, trigger `trg_SanPham_UpdateKho` được tạo trên bảng `SanPham`. Trigger này sẽ tự động kích hoạt sau khi dữ liệu của bảng `SanPham` bị cập nhật. Khi chạy, trigger thực hiện cập nhật bảng `KhoHang` bằng cách tăng giá trị `SucChua`.
+
+Sau đó, hệ thống tạo trigger `trg_KhoHang_UpdateSP` trên bảng `KhoHang`. Trigger này cũng được kích hoạt sau khi bảng `KhoHang` bị cập nhật. Khi thực thi, trigger tiếp tục cập nhật lại bảng `SanPham` bằng cách tăng `SoLuongTon`.
+
+Khi thực hiện câu lệnh cập nhật trên bảng `SanPham`, trigger đầu tiên sẽ chạy và cập nhật bảng `KhoHang`. Việc cập nhật `KhoHang` lại làm trigger thứ hai được kích hoạt. Trigger thứ hai tiếp tục cập nhật bảng `SanPham`, khiến trigger đầu tiên chạy lại.
+
+Quá trình này lặp đi lặp lại liên tục theo chuỗi:
+
+SanPham → KhoHang → SanPham → KhoHang → ...
+
+Do không có điều kiện dừng nên hệ thống tạo ra vòng lặp trigger vô hạn. Khi số mức lồng nhau vượt quá giới hạn cho phép của SQL Server, hệ thống sẽ phát sinh lỗi vượt quá mức nesting level và hủy transaction hiện tại.
+
+Đây là ví dụ điển hình của:
+
+- trigger đệ quy gián tiếp
+- nested trigger recursion
+- vòng lặp trigger giữa nhiều bảng
+
+Tình huống này cho thấy cần kiểm soát chặt chẽ logic cập nhật dữ liệu trong trigger để tránh gây lỗi hệ thống, giảm hiệu năng và làm mất tính ổn định của cơ sở dữ liệu.
+
+
+
 ```sql
 -- ============================================================
--- [MÔ PHỎNG LỖI] Trigger đệ quy gián tiếp giữa SanPham và KhoHang
+-- MÔ PHỎNG TRIGGER ĐỆ QUY GIÁN TIẾP
+-- SanPham → KhoHang → SanPham
 -- ============================================================
 
--- Trigger 1: Khi SanPham được UPDATE, tự động UPDATE KhoHang
-CREATE OR ALTER TRIGGER trg_SanPham_UpdateKho
+-- Bật recursive trigger
+ALTER DATABASE CURRENT
+SET RECURSIVE_TRIGGERS ON;
+GO
+
+
+-- ============================================================
+-- XÓA TRIGGER CŨ NẾU ĐÃ TỒN TẠI
+-- ============================================================
+
+IF OBJECT_ID('trg_SanPham_UpdateKho', 'TR') IS NOT NULL
+    DROP TRIGGER trg_SanPham_UpdateKho;
+GO
+
+IF OBJECT_ID('trg_KhoHang_UpdateSP', 'TR') IS NOT NULL
+    DROP TRIGGER trg_KhoHang_UpdateSP;
+GO
+
+
+-- ============================================================
+-- TRIGGER 1
+-- Khi UPDATE SanPham → UPDATE KhoHang
+-- ============================================================
+
+CREATE TRIGGER trg_SanPham_UpdateKho
 ON SanPham
 AFTER UPDATE
 AS
 BEGIN
-    -- Cập nhật số lượng sản phẩm trong kho
-    UPDATE KhoHang
-    SET SucChua = SucChua   -- Lệnh cập nhật (giả lập)
-    WHERE MaKho IN (SELECT MaKho FROM inserted);
+    SET NOCOUNT ON;
+
+    PRINT N'[Trigger] SanPham → KhoHang';
+
+    UPDATE kh
+    SET kh.SucChua = kh.SucChua + 1
+    FROM KhoHang kh
+    INNER JOIN inserted i
+        ON kh.MaKho = i.MaKho;
 END;
 GO
 
--- Trigger 2: Khi KhoHang được UPDATE, tự động UPDATE SanPham
-CREATE OR ALTER TRIGGER trg_KhoHang_UpdateSP
+
+-- ============================================================
+-- TRIGGER 2
+-- Khi UPDATE KhoHang → UPDATE SanPham
+-- ============================================================
+
+CREATE TRIGGER trg_KhoHang_UpdateSP
 ON KhoHang
 AFTER UPDATE
 AS
 BEGIN
-    -- Đây là vòng lặp: KhoHang update → trigger kích hoạt
-    -- → UPDATE SanPham → trigger trg_SanPham_UpdateKho kích hoạt
-    -- → UPDATE KhoHang → ... (vòng lặp vô hạn)
-    UPDATE SanPham
-    SET NgayNhapDau = NgayNhapDau  -- Lệnh cập nhật giả lập
-    WHERE MaKho IN (SELECT MaKho FROM inserted);
+    SET NOCOUNT ON;
+
+    PRINT N'[Trigger] KhoHang → SanPham';
+
+    UPDATE sp
+    SET sp.SoLuongTon = sp.SoLuongTon + 1
+    FROM SanPham sp
+    INNER JOIN inserted i
+        ON sp.MaKho = i.MaKho;
 END;
 GO
+
+
+-- ============================================================
+-- TEST GÂY ĐỆ QUY
+-- ============================================================
+
+UPDATE SanPham
+SET SoLuongTon = SoLuongTon + 1
+WHERE MaSP = 1;
+GO
 ```
+<img width="1919" height="1079" alt="image" src="https://github.com/user-attachments/assets/458448ad-ae24-4337-b845-049edccd4c0e" />
+Trigger tạo vòng lặp và gây lỗi
 
 #### 6.2.3 Lỗi phát sinh và nguyên nhân
 
@@ -1266,39 +1622,6 @@ Maximum stored procedure, function, trigger, or view nesting level exceeded (lim
 | Phạm vi ảnh hưởng | Transaction bị rollback, mọi thay đổi trong vòng lặp bị hủy |
 | Khó phát hiện | Đệ quy gián tiếp khó nhận ra hơn đệ quy trực tiếp |
 
-#### 6.2.4 Hướng xử lý
-
-```sql
--- ============================================================
--- GIẢI PHÁP 1: Tắt đệ quy trigger ở cấp database
--- ============================================================
-ALTER DATABASE QuanLyKhoHang SET RECURSIVE_TRIGGERS OFF;
-
--- ============================================================
--- GIẢI PHÁP 2: Dùng biến kiểm tra để phòng đệ quy trong trigger
--- ============================================================
-CREATE OR ALTER TRIGGER trg_SanPham_UpdateKho_Safe
-ON SanPham
-AFTER UPDATE
-AS
-BEGIN
-    -- Kiểm tra nếu đây là lần gọi đệ quy thì bỏ qua
-    IF TRIGGER_NESTLEVEL() > 1
-    BEGIN
-        PRINT N'[TRIGGER] Phát hiện đệ quy – bỏ qua để tránh vòng lặp.';
-        RETURN;
-    END;
-
-    -- Logic bình thường
-    UPDATE KhoHang
-    SET TrangThai = TrangThai
-    WHERE MaKho IN (SELECT MaKho FROM inserted);
-END;
-GO
-```
-
-> **Nhận xét thực tiễn:** Trong hệ thống kho hàng thực tế, việc thiết kế trigger cần tuân theo nguyên tắc đơn trách nhiệm – mỗi trigger chỉ phục vụ một mục đích duy nhất, không kéo theo chuỗi phụ thuộc phức tạp. Hàm `TRIGGER_NESTLEVEL()` là công cụ phòng thủ hiệu quả, cho phép trigger tự nhận biết mình đang được gọi đệ quy và chủ động dừng lại.
-
 ---
 
 ## 7. CURSOR
@@ -1308,6 +1631,27 @@ Cursor (con trỏ) là cơ chế xử lý tập kết quả theo từng dòng m�
 ### 7.1 Cursor duyệt tồn kho và cảnh báo
 
 **Bài toán:** Cuối mỗi ngày làm việc, hệ thống cần duyệt qua toàn bộ danh sách sản phẩm, tính giá trị tồn kho tương ứng, in báo cáo và đánh dấu cảnh báo đối với những mặt hàng có số lượng tồn dưới mức an toàn.
+
+# Phân tích logic xử lý Cursor quản lý tồn kho
+
+Cursor được sử dụng để duyệt lần lượt từng sản phẩm trong các kho đang hoạt động nhằm phân tích tình trạng tồn kho và tính giá trị hàng hóa.
+
+Đầu tiên, hệ thống khai báo các biến để lưu thông tin sản phẩm như mã sản phẩm, tên sản phẩm, tên kho, số lượng tồn, mức tồn tối thiểu và đơn giá nhập.
+
+Sau đó, cursor `cur_TonKho` được tạo để lấy danh sách sản phẩm từ bảng `SanPham` kết hợp với bảng `KhoHang`. Dữ liệu được sắp xếp theo tên kho và tên sản phẩm.
+
+Khi cursor hoạt động, hệ thống lần lượt đọc từng sản phẩm và thực hiện tính giá trị tồn kho bằng công thức:
+
+* số lượng tồn × đơn giá nhập
+
+Tiếp theo, hệ thống phân loại trạng thái tồn kho của sản phẩm. Nếu số lượng tồn bằng 0 thì sản phẩm được xác định là hết hàng. Nếu số lượng tồn nhỏ hơn hoặc bằng mức tồn tối thiểu thì hệ thống đánh dấu sắp hết hàng. Nếu số lượng tồn vẫn còn thấp nhưng chưa tới mức nguy hiểm thì được xếp vào nhóm tồn thấp. Các sản phẩm còn lại được xem là bình thường.
+
+Trong quá trình xử lý, hệ thống đồng thời cộng dồn tổng giá trị tồn kho và đếm số sản phẩm cần cảnh báo.
+
+Sau khi xử lý xong từng sản phẩm, hệ thống in thông tin chi tiết gồm tên sản phẩm, kho lưu trữ, số lượng tồn, giá trị tồn kho và trạng thái tồn kho.
+
+Cuối cùng, cursor được đóng và giải phóng khỏi bộ nhớ. Hệ thống hiển thị báo cáo tổng kết gồm tổng giá trị tồn kho và số sản phẩm cần cảnh báo.
+
 
 ```sql
 -- ============================================================
@@ -1400,26 +1744,244 @@ PRINT REPLICATE('=', 70);
 ```
 
 **Kết quả thực thi (trích):**
+
+
+<img width="1919" height="1079" alt="image" src="https://github.com/user-attachments/assets/5e9695a8-6bec-46f8-91d1-49a3865ccd81" />
+
+Sử dụng cursor báo cáo tình trạng tồn kho
+
+
+# Xử lý báo cáo tồn kho theo hướng Set-Based
+
+Thay vì sử dụng cursor để duyệt tuần tự từng sản phẩm, hệ thống có thể áp dụng phương pháp Set-Based để xử lý trực tiếp trên toàn bộ tập dữ liệu bằng các câu lệnh SQL tổng hợp.
+
+Phương pháp này cho phép hệ thống tính toán giá trị tồn kho, phân loại trạng thái hàng hóa và thống kê dữ liệu ngay trong một truy vấn duy nhất mà không cần xử lý từng dòng dữ liệu riêng lẻ.
+
+Giá trị tồn kho được tính bằng:
+
+- số lượng tồn × đơn giá nhập
+
+Hệ thống đồng thời sử dụng biểu thức `CASE` để xác định trạng thái tồn kho như:
+
+- hết hàng
+- sắp hết
+- tồn thấp
+- bình thường
+
+Ngoài ra, các phép tổng hợp như tổng giá trị tồn kho và số lượng sản phẩm cần cảnh báo được thực hiện bằng các hàm `SUM` và `COUNT`.
+
+So với cursor, phương pháp Set-Based có tốc độ xử lý nhanh hơn, tối ưu hiệu năng tốt hơn và phù hợp với các bài toán thống kê dữ liệu lớn trong hệ thống quản lý kho hàng.
+
+---
+
+## Code xử lý Set-Based
+
+```sql
+-- ============================================================
+-- SET-BASED: Báo cáo tình trạng tồn kho không dùng CURSOR
+-- ============================================================
+
+SELECT
+    sp.MaSP,
+    sp.TenSP,
+    kh.TenKho,
+    sp.DonViTinh,
+    sp.SoLuongTon,
+    sp.DonGiaNhap,
+
+    -- Giá trị tồn kho
+    sp.SoLuongTon * sp.DonGiaNhap AS GiaTriTon,
+
+    -- Phân loại trạng thái tồn kho
+    CASE
+        WHEN sp.SoLuongTon = 0
+            THEN N'[HẾT HÀNG]'
+
+        WHEN sp.SoLuongTon <= sp.MucTonToiThieu
+            THEN N'[SẮP HẾT]'
+
+        WHEN sp.SoLuongTon <= sp.MucTonToiThieu * 2
+            THEN N'[TỒN THẤP]'
+
+        ELSE N'[BÌNH THƯỜNG]'
+    END AS TrangThaiTon
+
+FROM SanPham sp
+INNER JOIN KhoHang kh
+    ON sp.MaKho = kh.MaKho
+
+WHERE kh.TrangThai = N'HoatDong'
+
+ORDER BY kh.TenKho, sp.TenSP;
+
+
+-- ============================================================
+-- THỐNG KÊ TỔNG HỢP
+-- ============================================================
+
+SELECT
+    SUM(sp.SoLuongTon * sp.DonGiaNhap) AS TongGiaTriTonKho,
+
+    COUNT(
+        CASE
+            WHEN sp.SoLuongTon <= sp.MucTonToiThieu
+            THEN 1
+        END
+    ) AS SoSanPhamCanhBao
+
+FROM SanPham sp
+INNER JOIN KhoHang kh
+    ON sp.MaKho = kh.MaKho
+
+WHERE kh.TrangThai = N'HoatDong';
 ```
-======================================================================
-     BÁO CÁO TÌNH TRẠNG TỒN KHO – 15/04/2024 08:30
-======================================================================
-Sản phẩm: Bộ lưu điện APC 600VA | Kho: Kho Miền Trung | Tồn: 25 Cái | Giá trị: 33,750,000 VNĐ | [TỒN THẤP]
-Sản phẩm: Chuột Logitech MX Master 3 | Kho: Kho Trung Tâm | Tồn: 90 Cái | Giá trị: 85,500,000 VNĐ | [BÌNH THƯỜNG]
-Sản phẩm: Laptop Dell Inspiron 15 | Kho: Kho Hàng Điện Tử | Tồn: 45 Cái | Giá trị: 832,500,000 VNĐ | [BÌNH THƯỜNG]
-Sản phẩm: Máy in HP LaserJet 107a | Kho: Kho Miền Nam | Tồn: 18 Cái | Giá trị: 61,200,000 VNĐ | [SẮP HẾT]
-...
-----------------------------------------------------------------------
-Tổng giá trị tồn kho: 3,860,600,000 VNĐ
-Số sản phẩm cần cảnh báo: 4
-======================================================================
-```
+
+<img width="1919" height="1079" alt="image" src="https://github.com/user-attachments/assets/487c6975-9fa1-4474-8544-6cdd42cd8535" />
+
+Báo cáo tình trạng tồn kho không dùng CURSOR
+
+# So sánh xử lý báo cáo tồn kho bằng Cursor và Set-Based
+
+Trong hệ thống quản lý kho hàng, bài toán thống kê và phân tích tồn kho có thể được triển khai theo hai phương pháp phổ biến là Cursor và Set-Based. Hai phương pháp này đều hỗ trợ xử lý dữ liệu tồn kho nhưng khác nhau về cách hoạt động, hiệu năng và mục đích sử dụng.
+
+---
+
+# 1. Xử lý bằng Cursor
+
+Cursor hoạt động theo cơ chế duyệt tuần tự từng dòng dữ liệu. Hệ thống sẽ lấy từng sản phẩm trong kho, sau đó thực hiện các bước xử lý riêng cho từng bản ghi như:
+
+- tính giá trị tồn kho
+- xác định trạng thái tồn kho
+- cộng dồn tổng giá trị
+- đếm số lượng cảnh báo
+
+Phương pháp này giúp dễ kiểm soát logic xử lý theo từng bước và phù hợp với các bài toán cần thao tác tuần tự trên từng dữ liệu riêng biệt.
+
+Tuy nhiên, do phải xử lý từng dòng nên Cursor thường có tốc độ chậm hơn khi dữ liệu lớn và tiêu tốn nhiều tài nguyên hệ thống.
+
+---
+
+# 2. Xử lý bằng Set-Based
+
+Set-Based xử lý toàn bộ tập dữ liệu cùng lúc thông qua các câu lệnh SQL tổng hợp như:
+
+- `SELECT`
+- `SUM`
+- `COUNT`
+- `CASE`
+- `GROUP BY`
+
+Thay vì duyệt từng sản phẩm, hệ thống thực hiện tính toán trực tiếp trên toàn bộ bảng dữ liệu.
+
+Phương pháp này giúp:
+
+- tăng tốc độ xử lý
+- giảm số lần truy cập dữ liệu
+- tận dụng tối ưu của SQL Server
+- nâng cao hiệu năng hệ thống
+
+Set-Based đặc biệt phù hợp với các bài toán thống kê, báo cáo và xử lý dữ liệu lớn.
+
+---
+
+# 3. So sánh hai phương pháp
+
+| Tiêu chí | Cursor | Set-Based |
+|---|---|---|
+| Cách xử lý | Duyệt từng dòng dữ liệu | Xử lý toàn bộ tập dữ liệu |
+| Tốc độ xử lý | Chậm hơn | Nhanh hơn |
+| Hiệu năng | Thấp khi dữ liệu lớn | Tối ưu tốt |
+| Tài nguyên hệ thống | Tốn nhiều bộ nhớ và transaction | Tối ưu hơn |
+| Độ linh hoạt logic | Cao | Thấp hơn trong xử lý tuần tự |
+| Khả năng mở rộng | Kém hơn | Tốt hơn |
+| Phù hợp | Logic tuần tự phức tạp | Thống kê và báo cáo dữ liệu lớn |
+
+---
+
+# 4. Nhận xét
+
+Qua so sánh có thể thấy Set-Based là phương pháp tối ưu hơn trong các hệ thống quản lý dữ liệu lớn nhờ khả năng xử lý nhanh và tận dụng cơ chế tối ưu truy vấn của SQL Server.
+
+Trong bài toán quản lý tồn kho, phần lớn thao tác chỉ bao gồm thống kê, tính toán và phân loại dữ liệu nên Set-Based thường được ưu tiên sử dụng.
+
+Ngược lại, Cursor phù hợp hơn trong các trường hợp cần xử lý tuần tự từng bản ghi hoặc cần áp dụng các logic phức tạp khó biểu diễn bằng truy vấn tập dữ liệu.
+
+Do đó, trong thực tế nên ưu tiên Set-Based để tối ưu hiệu năng hệ thống và chỉ sử dụng Cursor khi thật sự cần thiết.
+
 
 ### 7.2 Cursor gửi email cảnh báo tồn kho thấp
 
 **Bài toán:** Khi tồn kho của một mặt hàng xuống dưới mức an toàn, hệ thống cần tự động gửi email thông báo đến quản lý kho tương ứng. Cursor được sử dụng để duyệt từng sản phẩm cần cảnh báo và gọi `sp_send_dbmail` cho từng trường hợp.
 
 > **Lưu ý:** Để sử dụng `sp_send_dbmail`, Database Mail phải được cấu hình sẵn trong SQL Server. Đoạn code dưới đây giả định đã có profile mail tên `KhoHangMailProfile`.
+
+# Phân tích logic xử lý Cursor gửi email cảnh báo tồn kho
+
+Đoạn mã sử dụng Cursor để duyệt lần lượt từng sản phẩm có số lượng tồn kho dưới mức an toàn nhằm gửi email cảnh báo đến quản lý kho.
+
+Đầu tiên, hệ thống khai báo các biến dùng để lưu thông tin của từng sản phẩm như:
+
+- mã sản phẩm
+- tên sản phẩm
+- tên kho
+- số lượng tồn hiện tại
+- mức tồn tối thiểu
+- giá trị hàng còn lại
+- tiêu đề email
+- nội dung email
+
+Sau đó, cursor `cur_CanhBaoEmail` được tạo để lấy danh sách các sản phẩm có tồn kho thấp hơn hoặc bằng mức tồn tối thiểu trong các kho đang hoạt động.
+
+Khi cursor được mở, hệ thống sẽ lần lượt đọc từng sản phẩm trong danh sách cảnh báo.
+
+Với mỗi sản phẩm, hệ thống thực hiện:
+
+- tạo tiêu đề email cảnh báo
+- tạo nội dung email dạng HTML
+- chèn thông tin sản phẩm vào nội dung email
+- gửi email thông qua `sp_send_dbmail`
+
+Nếu gửi email thành công, hệ thống sẽ tăng biến đếm số email đã gửi và hiển thị thông báo xác nhận.
+
+Ngược lại, nếu phát sinh lỗi trong quá trình gửi mail, hệ thống sẽ bắt lỗi bằng `TRY...CATCH` và hiển thị thông báo lỗi tương ứng.
+
+Quá trình này tiếp tục cho đến khi cursor duyệt hết toàn bộ sản phẩm cần cảnh báo.
+
+Cuối cùng, cursor được đóng, giải phóng bộ nhớ và hệ thống in ra tổng số email đã gửi thành công.
+
+---
+
+# Tại sao bắt buộc phải dùng Cursor
+
+Trong bài toán này, Cursor gần như là bắt buộc vì hệ thống cần xử lý riêng biệt cho từng sản phẩm và từng email.
+
+Mỗi sản phẩm sẽ có:
+
+- tiêu đề email khác nhau
+- nội dung email khác nhau
+- thông tin tồn kho khác nhau
+- thời điểm gửi và trạng thái gửi riêng biệt
+
+Việc gửi email bằng `sp_send_dbmail` là thao tác xử lý theo từng lần gọi thủ tục (row-by-row operation), không thể thực hiện đồng thời cho toàn bộ tập dữ liệu bằng một câu lệnh Set-Based thông thường.
+
+Nếu sử dụng Set-Based:
+
+- khó tạo nội dung HTML riêng cho từng sản phẩm
+- không thể gọi `sp_send_dbmail` cho nhiều dòng dữ liệu trong cùng một lệnh SELECT
+- khó kiểm soát lỗi gửi mail theo từng sản phẩm
+- khó theo dõi số lượng email gửi thành công hoặc thất bại
+
+Trong khi đó, Cursor cho phép:
+
+- xử lý tuần tự từng sản phẩm
+- tạo nội dung email động cho từng bản ghi
+- gửi mail riêng biệt
+- bắt lỗi riêng cho từng lần gửi
+- kiểm soát luồng xử lý chi tiết
+
+Do đó, khác với các bài toán thống kê dữ liệu thông thường, bài toán gửi email cảnh báo là trường hợp phù hợp và gần như bắt buộc phải sử dụng Cursor.
+
+
 
 ```sql
 -- ============================================================
@@ -1511,200 +2073,7 @@ PRINT N'Hoàn tất gửi email. Tổng số email đã gửi: ' + CAST(@SoEmail
 ```
 
 **Kết quả thực thi:**
-```
-Đã gửi email cảnh báo cho sản phẩm: Máy in HP LaserJet 107a
-Đã gửi email cảnh báo cho sản phẩm: Bộ lưu điện APC 600VA
-Đã gửi email cảnh báo cho sản phẩm: Máy tính bảng Samsung Tab S7
-Hoàn tất gửi email. Tổng số email đã gửi: 3
-```
 
-### 7.3 So sánh Cursor và Set-based
+<img width="1919" height="1079" alt="image" src="https://github.com/user-attachments/assets/9d21ebba-361c-4719-8155-c25640bdac66" />
 
-Cursor là công cụ mạnh nhưng có chi phí hiệu năng đáng kể do phải xử lý tuần tự từng dòng. Trong đa số tình huống báo cáo kho hàng, có thể thay thế Cursor bằng cú pháp tập hợp hiệu quả hơn.
-
-**Ví dụ so sánh: tính tổng giá trị tồn kho**
-
-*Cách dùng Cursor (chậm):*
-
-```sql
--- Phương pháp Cursor: O(n) với vòng lặp tường minh
-DECLARE @Tong DECIMAL(18,2) = 0;
-DECLARE @GiaTri DECIMAL(18,2);
-
-DECLARE cur_Tong CURSOR FOR
-    SELECT SoLuongTon * DonGiaNhap FROM SanPham;
-
-OPEN cur_Tong;
-FETCH NEXT FROM cur_Tong INTO @GiaTri;
-
-WHILE @@FETCH_STATUS = 0
-BEGIN
-    SET @Tong = @Tong + @GiaTri;
-    FETCH NEXT FROM cur_Tong INTO @GiaTri;
-END;
-
-CLOSE cur_Tong;
-DEALLOCATE cur_Tong;
-
-SELECT @Tong AS TongGiaTriTonKho;
-```
-
-*Cách dùng Set-based (nhanh):*
-
-```sql
--- Phương pháp tập hợp: một lệnh duy nhất, SQL Server tối ưu hóa
-SELECT SUM(SoLuongTon * DonGiaNhap) AS TongGiaTriTonKho
-FROM SanPham;
-```
-
-**Bảng so sánh toàn diện:**
-
-| Tiêu chí | Cursor | Set-based |
-|----------|--------|-----------|
-| Tốc độ xử lý | Chậm (row-by-row) | Nhanh (tập hợp) |
-| Tải I/O | Cao | Thấp |
-| Sử dụng bộ nhớ | Cao (giữ tập kết quả) | Thấp |
-| Khả năng tối ưu | Hạn chế | Tốt (Query Optimizer) |
-| Phù hợp khi | Logic phức tạp theo dòng, gửi email từng item | Tính toán, tổng hợp, lọc |
-| Độ phức tạp code | Cao | Thấp |
-| Khả năng song song | Không | Có (parallel plans) |
-
-> **Kết luận về Cursor:** Trong hệ thống quản lý kho hàng, Cursor phù hợp nhất cho tác vụ gửi email cảnh báo từng sản phẩm hoặc in báo cáo có định dạng phức tạp. Với các bài toán tổng hợp số liệu, tính tổng, lọc dữ liệu, nên ưu tiên cú pháp SET-BASED để đảm bảo hiệu năng, đặc biệt khi số lượng sản phẩm lên đến hàng nghìn hoặc hàng triệu bản ghi.
-
----
-
-## 8. PHÂN TÍCH HIỆU NĂNG
-
-### 8.1 Đo lường IO và thời gian thực thi
-
-SQL Server cung cấp lệnh `SET STATISTICS IO ON` và `SET STATISTICS TIME ON` để đo lường chi phí I/O và thời gian CPU của từng câu truy vấn.
-
-```sql
--- ============================================================
--- ĐO LƯỜNG HIỆU NĂNG TRUY VẤN BÁO CÁO KHO
--- ============================================================
-SET STATISTICS IO ON;
-SET STATISTICS TIME ON;
-
--- Truy vấn 1: Báo cáo nhập xuất tồn (Set-based)
-SELECT
-    sp.TenSP,
-    kh.TenKho,
-    SUM(CASE WHEN pnx.LoaiPhieu = N'Nhap' THEN pnx.SoLuong ELSE 0 END) AS TongNhap,
-    SUM(CASE WHEN pnx.LoaiPhieu = N'Xuat' THEN pnx.SoLuong ELSE 0 END) AS TongXuat,
-    sp.SoLuongTon AS TonHienTai
-FROM SanPham sp
-INNER JOIN KhoHang kh        ON sp.MaKho = kh.MaKho
-LEFT  JOIN PhieuNhapXuat pnx ON sp.MaSP  = pnx.MaSP
-WHERE YEAR(pnx.NgayGiaoDich) = 2024
-GROUP BY sp.MaSP, sp.TenSP, kh.TenKho, sp.SoLuongTon
-ORDER BY kh.TenKho, TongNhap DESC;
-
-SET STATISTICS IO OFF;
-SET STATISTICS TIME ON;
-```
-
-**Kết quả STATISTICS IO (mẫu):**
-```
-Table 'PhieuNhapXuat'. Scan count 1, logical reads 3, physical reads 0.
-Table 'SanPham'. Scan count 1, logical reads 2, physical reads 0.
-Table 'KhoHang'. Scan count 1, logical reads 1, physical reads 0.
-
-SQL Server Execution Times:
-   CPU time = 2 ms, elapsed time = 5 ms.
-```
-
-### 8.2 Tác động của Index
-
-```sql
--- ============================================================
--- TẠO INDEX CẢI THIỆN HIỆU NĂNG TRUY VẤN KHO
--- ============================================================
-
--- Index trên cột thường dùng làm điều kiện lọc
-CREATE NONCLUSTERED INDEX IX_PhieuNhapXuat_NgayLoai
-    ON PhieuNhapXuat (NgayGiaoDich, LoaiPhieu)
-    INCLUDE (MaSP, SoLuong, DonGia);
-
-CREATE NONCLUSTERED INDEX IX_SanPham_MaKho_Ton
-    ON SanPham (MaKho, SoLuongTon)
-    INCLUDE (TenSP, DonGiaNhap, MucTonToiThieu);
-
--- Kiểm tra index vừa tạo
-SELECT
-    i.name          AS TenIndex,
-    i.type_desc     AS LoaiIndex,
-    c.name          AS TenCot,
-    ic.key_ordinal  AS ThuTuKhoa
-FROM sys.indexes i
-INNER JOIN sys.index_columns ic ON i.object_id = ic.object_id AND i.index_id = ic.index_id
-INNER JOIN sys.columns c        ON ic.object_id = c.object_id AND ic.column_id = c.column_id
-WHERE i.object_id = OBJECT_ID('PhieuNhapXuat')
-ORDER BY i.name, ic.key_ordinal;
-```
-
-### 8.3 So sánh hiệu năng trước và sau khi tạo Index
-
-| Truy vấn | Trước khi có Index | Sau khi có Index | Cải thiện |
-|----------|--------------------|------------------|-----------|
-| Lọc phiếu theo tháng | Scan toàn bảng (40 rows, Scan 1) | Index Seek (Seek 1) | ~60% |
-| Báo cáo nhập xuất tổng | Logical reads: 8 | Logical reads: 3 | ~62% |
-| Danh sách sản phẩm theo kho | Scan bảng SanPham | Index Seek trên IX_SanPham | ~55% |
-
-> **Lưu ý:** Với dữ liệu mẫu nhỏ (25 sản phẩm, 40 phiếu), sự khác biệt hiệu năng chưa thực sự rõ nét. Tuy nhiên, trong môi trường sản xuất với hàng trăm nghìn phiếu nhập xuất, các Index trên cột `NgayGiaoDich` và `LoaiPhieu` sẽ có tác động cực kỳ đáng kể, đặc biệt với các báo cáo lọc theo kỳ thời gian.
-
-### 8.4 Nhận xét tổng thể hiệu năng
-
-| Thành phần | Đánh giá | Khuyến nghị |
-|------------|----------|-------------|
-| Trigger cập nhật tồn kho | Hiệu quả, chỉ UPDATE theo `MaSP` cụ thể | Đảm bảo FK được index đúng |
-| Inline TVF `fn_SanPhamTheoKho` | Tốt, được optimizer nội tuyến hóa | Tạo index bao phủ trên `MaKho` |
-| Multi-statement TVF | Tạo bảng tạm trong bộ nhớ | Chỉ dùng cho bộ dữ liệu vừa phải |
-| Cursor gửi email | Chấp nhận được (tần suất thấp) | Không dùng trong giao dịch thời gian thực |
-| Stored Procedure báo cáo | Hiệu quả nhờ kế hoạch cache | Theo dõi plan recompilation |
-
----
-
-## 9. KẾT LUẬN
-
-### 9.1 Tổng kết những gì đã thực hiện
-
-Báo cáo đã trình bày đầy đủ và hệ thống quá trình xây dựng một cơ sở dữ liệu quản lý kho hàng hoàn chỉnh trên nền tảng Microsoft SQL Server 2019, bao gồm:
-
-**Về thiết kế dữ liệu:** Ba bảng chính `KhoHang`, `SanPham` và `PhieuNhapXuat` được thiết kế với đầy đủ ràng buộc toàn vẹn (PK, FK, CHECK, DEFAULT, IDENTITY), chuẩn hóa đến 3NF và phản ánh đúng các thực thể trong nghiệp vụ kho hàng thực tế.
-
-**Về hàm (Function):** Ba loại UDF đã được triển khai phục vụ các mục đích khác nhau. Scalar Function `fn_SoNgayTonKho` tính tuổi thọ của sản phẩm trong kho; Inline TVF `fn_SanPhamTheoKho` cung cấp danh sách sản phẩm có tham số kho; Multi-statement TVF `fn_TinhGiaTriTonKho` phân tích cấu trúc giá trị tồn kho theo ba mức.
-
-**Về Stored Procedure:** Ba thủ tục phục vụ các tình huống nghiệp vụ thường gặp: thêm sản phẩm có kiểm tra hợp lệ, tổng hợp giá trị kho với tham số OUTPUT, và báo cáo nhập – xuất – tồn linh hoạt theo kỳ thời gian và theo kho.
-
-**Về Trigger:** Cơ chế cập nhật tồn kho tự động được triển khai qua Trigger AFTER INSERT và AFTER DELETE, bảo vệ chống xuất vượt tồn và phân tích kỹ rủi ro đệ quy gián tiếp giữa các bảng.
-
-**Về Cursor:** Cursor được ứng dụng vào hai tác vụ đặc thù: in báo cáo tồn kho định dạng theo từng sản phẩm và gửi email cảnh báo tự động đến quản lý kho khi hàng sắp hết.
-
-### 9.2 Hướng phát triển tiếp theo
-
-| STT | Hướng phát triển | Mô tả |
-|-----|-----------------|-------|
-| 1 | Quản lý nhà cung cấp | Bổ sung bảng `NhaCungCap` và liên kết với phiếu nhập |
-| 2 | Lịch sử giá nhập | Lưu vết giá nhập qua thời gian để tính giá vốn trung bình |
-| 3 | Phân quyền người dùng | Phân quyền theo vai trò: thủ kho, kế toán kho, giám đốc |
-| 4 | Tối ưu hóa Partition | Phân vùng bảng `PhieuNhapXuat` theo năm để tăng tốc truy vấn lịch sử |
-| 5 | Dashboard báo cáo | Kết nối Power BI để trực quan hóa dữ liệu nhập xuất tồn |
-| 6 | API tích hợp | Xây dựng REST API trên nền Stored Procedure để kết nối ứng dụng di động |
-
-### 9.3 Bài học kinh nghiệm
-
-Qua quá trình xây dựng hệ thống này, một số bài học thực tiễn quan trọng có thể rút ra:
-
-- **Trigger mạnh nhưng cần cẩn thận:** Trigger cập nhật tồn kho giúp đảm bảo nhất quán dữ liệu, nhưng nếu thiết kế không cẩn thận (đặc biệt về đệ quy và kiểm tra tồn âm), có thể gây ra lỗi khó debug. Luôn bổ sung `ROLLBACK TRANSACTION` và kiểm tra điều kiện trước khi cập nhật.
-- **Ưu tiên Set-based:** Cursor chỉ nên dùng khi thực sự cần xử lý từng dòng (ví dụ: gửi email cá nhân hóa). Các bài toán tổng hợp số liệu đều có giải pháp Set-based hiệu quả hơn nhiều.
-- **Constraint là hàng phòng thủ đầu tiên:** Các ràng buộc như `CHECK (SoLuongTon >= 0)`, `CHECK (LoaiPhieu IN ('Nhap','Xuat'))` bảo vệ tính hợp lệ dữ liệu ngay tại tầng cơ sở dữ liệu, không phụ thuộc vào logic ứng dụng.
-- **Index chiến lược:** Không nên tạo index tràn lan. Chỉ tạo Index trên các cột thực sự được dùng trong mệnh đề `WHERE`, `JOIN`, `ORDER BY` của những câu truy vấn chạy thường xuyên và trên bảng lớn.
-
----
-
-*Báo cáo được thực hiện với mục đích học tập và nghiên cứu. Toàn bộ mã SQL đã được kiểm thử trên SQL Server 2019 với bộ dữ liệu mẫu tổng hợp.*
-
----
-
-**HẾT BÁO CÁO**
+Gửi email cảnh báo tồn kho thấp đến quản lý
